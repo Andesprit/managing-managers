@@ -1,0 +1,5 @@
+name: managing_managers
+conduits:
+  - managing_managers
+  - mm_queue_step
+  - mm_brief

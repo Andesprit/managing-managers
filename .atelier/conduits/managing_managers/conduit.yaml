@@ -1,0 +1,48 @@
+name: managing_managers
+description: >-
+  Run a queue of written briefs from .atelier/briefs, one at a time. For each brief an Opus manager
+  plans tasks against the brief's definition of done, Codex workers build them, fresh Codex
+  reviewers check the whole brief, and the brief ends as soon as the review loop closes. Each brief
+  gets its own branch, stacked on the previous one, and its own pull request. The queue stops at the
+  first paused brief. Time is only a safety cap.
+inputs:
+  hours: {description: "Safety cap for the whole run in hours (more than 0, up to 720). It never decides that work should continue. Trusted operator input.", default: "12"}
+  max_review_rounds: {description: "Hard cap on review rounds per brief (1-10). Trusted operator input.", default: "6"}
+  max_task_turns: {description: "Worker turns per task before the manager must accept, abandon or pause (1-20). Trusted operator input.", default: "6"}
+  pull_request: {description: "Open a pull request per finished brief (true or false). Trusted operator input.", default: "true"}
+  pull_request_base: {description: "Branch the first brief's pull request targets; empty means the repository's default branch. Trusted operator input.", default: ""}
+  min_claude_weekly_remaining: {description: "Pause while the remaining Claude weekly allowance is below this percent (1-100). Trusted operator input.", default: "40"}
+  min_claude_5h_remaining: {description: "Pause while the remaining Claude 5-hour allowance is below this percent (1-100). Trusted operator input.", default: "30"}
+  min_codex_remaining: {description: "Pause while the remaining Codex weekly allowance is below this percent (1-100). Trusted operator input.", default: "30"}
+  usage_reserve_percent: {description: "Extra points above each floor before a stage starts (0-25). Trusted operator input.", default: "5"}
+  usage_poll_seconds: {description: "Seconds to wait before rechecking usage while paused (1-3600). Trusted operator input.", default: "300"}
+  claude_weekly_model: {description: "Display name of the Claude model whose weekly meter applies, or all for the all-model total. Trusted operator input.", default: "all"}
+tasks:
+  - setup:
+      description: Guard the dedicated worktree, read the briefs into the queue (or continue it) and print the safety deadline
+      task: >-
+        python3 "{{conduit_dir}}/../mm_brief/scripts/run.py" init
+        '{{inputs.hours}}' '{{inputs.max_review_rounds}}' '{{inputs.max_task_turns}}'
+        '{{inputs.pull_request}}' '{{inputs.pull_request_base}}'
+      tool: tool:bash
+      depends_on: []
+  - queue:
+      description: One brief per pass, from its branch to its pull request; stop when the queue ends or a brief pauses
+      task: mm_queue_step
+      tool: tool:conduit
+      inputs:
+        min_claude_weekly_remaining: "{{inputs.min_claude_weekly_remaining}}"
+        min_claude_5h_remaining: "{{inputs.min_claude_5h_remaining}}"
+        min_codex_remaining: "{{inputs.min_codex_remaining}}"
+        usage_reserve_percent: "{{inputs.usage_reserve_percent}}"
+        usage_poll_seconds: "{{inputs.usage_poll_seconds}}"
+        claude_weekly_model: "{{inputs.claude_weekly_model}}"
+      depends_on: [setup]
+      repeat: 100
+      until: 'output.match(^QUEUE_END$)'
+      on_exhaust: fail
+  - summary:
+      description: Print the one-page summary of every brief and its pull request
+      task: python3 "{{conduit_dir}}/../mm_brief/scripts/run.py" summary
+      tool: tool:bash
+      depends_on: [queue]

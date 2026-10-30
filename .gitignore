@@ -1,0 +1,7 @@
+.atelier/flows/
+.atelier/mm/
+.atelier/briefs/
+__pycache__/
+.ruff_cache/
+.venv/
+.DS_Store

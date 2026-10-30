@@ -1,0 +1,41 @@
+name: mm_queue_step
+description: Open the next brief on its own branch, run it to its end, then push it and open its pull request.
+inputs:
+  min_claude_weekly_remaining: {description: "Claude weekly floor (1-100). Trusted operator input.", default: "40"}
+  min_claude_5h_remaining: {description: "Claude 5-hour floor (1-100). Trusted operator input.", default: "30"}
+  min_codex_remaining: {description: "Codex weekly floor (1-100). Trusted operator input.", default: "30"}
+  usage_reserve_percent: {description: "Extra points above each floor (0-25). Trusted operator input.", default: "5"}
+  usage_poll_seconds: {description: "Seconds between usage checks while paused (1-3600). Trusted operator input.", default: "300"}
+  claude_weekly_model: {description: "Claude weekly meter name, or all. Trusted operator input.", default: "all"}
+tasks:
+  - start:
+      description: Open the next brief on a branch stacked on the previous one; prints its ID, or QUEUE_END
+      task: python3 "{{conduit_dir}}/../mm_brief/scripts/run.py" start
+      tool: tool:bash
+      depends_on: []
+  - brief:
+      description: One stage of the brief per pass, until the brief is done or paused
+      task: mm_brief
+      tool: tool:conduit
+      inputs:
+        brief: "{{start.output}}"
+        min_claude_weekly_remaining: "{{inputs.min_claude_weekly_remaining}}"
+        min_claude_5h_remaining: "{{inputs.min_claude_5h_remaining}}"
+        min_codex_remaining: "{{inputs.min_codex_remaining}}"
+        usage_reserve_percent: "{{inputs.usage_reserve_percent}}"
+        usage_poll_seconds: "{{inputs.usage_poll_seconds}}"
+        claude_weekly_model: "{{inputs.claude_weekly_model}}"
+      depends_on: ['start.output.match(^[0-9a-z][0-9a-z-]*$)']
+      repeat: 1000
+      until: 'output.match(^BRIEF_END$)'
+      on_exhaust: fail
+  - publish:
+      description: Push the finished brief without force and open or update its pull request; prints NEXT or QUEUE_END
+      task: python3 "{{conduit_dir}}/../mm_brief/scripts/run.py" publish
+      tool: tool:bash
+      depends_on: [brief]
+  - end:
+      description: Nothing left to run
+      task: printf QUEUE_END
+      tool: tool:bash
+      depends_on: ['start.output.match(^QUEUE_END$)']
