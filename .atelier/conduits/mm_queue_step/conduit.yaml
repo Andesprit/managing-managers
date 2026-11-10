@@ -29,6 +29,7 @@ tasks:
       repeat: 1000
       until: 'output.match(^BRIEF_END$)'
       on_exhaust: fail
+      on_failed_try: fail
   - publish:
       description: Push the finished brief without force and open or update its pull request; prints NEXT or QUEUE_END
       task: python3 "{{conduit_dir}}/../mm_brief/scripts/run.py" publish
