@@ -14,21 +14,26 @@ Severity scale (used by reviewers, the manager and the report):
 
 ## Manager: PLAN (`request.phase` is PLAN)
 
-Read the brief at `brief_path`. Turn its definition of done into a scorecard, one outcome per item,
-then break the brief into small tasks. Plan only what the brief asks; out-of-scope ideas are not
-tasks. A measured outcome has a read-only command whose last output line is one number; the
+Read the brief at `brief_path`. Turn its definition of done into a scorecard, one outcome per item.
+Plan only the work the brief asks for. A task gives one worker a result you can verify. Keep the
+investigation, edits, tests and revisions for that result with the same worker, using its skills.
+Split only when the benefit justifies the handoff. In `summary`, say what each extra worker adds:
+clean context for the next step, work that can run in parallel, an independent test or review,
+or a step that needs different permissions or a different agent.
+
+A measured outcome has a read-only command whose last output line is one number; the
 controller runs it itself now and at the end, so keep it fast and read-only.
 
 ```json
-{"request_id": "...", "summary": "the plan in two sentences",
+{"request_id": "...", "summary": "One worker will fix the login error and verify it with a regression test.",
  "scorecard": [
    {"id": "tests-pass", "outcome": "The test suite passes", "kind": "measured",
     "command": "pytest -q >/dev/null 2>&1; echo $?", "direction": "down", "target": 0},
    {"id": "login-error", "outcome": "A wrong password shows a clear message", "kind": "judged",
     "how": "Log in with a wrong password and read the message"}],
  "tasks": [
-   {"id": "message", "title": "Show the error message", "scope": ["src/login.py"],
-    "outcomes": ["login-error"]}]}
+   {"id": "message", "title": "Show the error message", "scope": ["src/login.py", "tests/test_login.py"],
+    "outcomes": ["login-error", "tests-pass"]}]}
 ```
 
 Task ids are lowercase letters, digits and dashes. Every task names the scorecard outcomes it
@@ -67,7 +72,9 @@ outcomes the task serves, and look at the commits since `request.task.base`.
  "new_tasks": []}
 ```
 
-`new_tasks` (same shape as in PLAN) adds tasks that the brief needs and the plan missed.
+Use `new_tasks` only for work the brief needs and the plan missed. Apply the PLAN task rule and
+task shape to each addition. Keep revisions with the current worker. Explain the benefit of each
+extra worker in `reason`.
 
 ## Reviewer: REVIEW (`request.stage` is REVIEW)
 
