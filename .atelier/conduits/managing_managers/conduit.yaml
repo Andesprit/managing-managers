@@ -41,6 +41,7 @@ tasks:
       repeat: 100
       until: 'output.match(^QUEUE_END$)'
       on_exhaust: fail
+      on_failed_try: fail
   - summary:
       description: Print the one-page summary of every brief and its pull request
       task: python3 "{{conduit_dir}}/../mm_brief/scripts/run.py" summary

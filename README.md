@@ -21,7 +21,7 @@ atelier check managing_managers --recursive --probe
 CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1 atelier run managing_managers
 ```
 
-Requires Flow Atelier 0.12.0 or newer, Git, Bash, Python 3.11+ as `python3`, and logged-in Claude
+Requires Flow Atelier 0.13.0 or newer, Git, Bash, Python 3.11+ as `python3`, and logged-in Claude
 Code and Codex. Pull requests need an `origin` remote and a signed-in `gh`.
 
 ## Conduits
